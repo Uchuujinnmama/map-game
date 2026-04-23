@@ -1,0 +1,432 @@
+import React, { useState, useEffect } from 'react';
+import { Trophy, Star, ArrowLeft, RefreshCcw, HelpCircle, Map, Compass, HardHat, ShieldCheck, Plane, Search, BookOpen, Globe, List, Radio, Wind, Flame, Landmark } from 'lucide-react';
+
+// 地図記号データの定義（プロ仕様に拡充）
+const SYMBOLS = {
+  level1: [
+    { id: 'school', name: '小・中学校', category: '学校', desc: '「文」の文字をデザインしたもの。' },
+    { id: 'post', name: '郵便局', category: '公共施設', desc: '昔の郵便マーク「〒」から。' },
+    { id: 'police', name: '交番', category: '警察', desc: '警棒をクロスさせた形。' },
+    { id: 'city_hall', name: '市役所', category: '公共施設', desc: '二重の丸は大きな役所を表すよ。' },
+    { id: 'fire_station', name: '消防署', category: '公共施設', desc: '火消しの道具「さすまた」の形。' },
+    { id: 'hospital', name: '病院', category: '医療', desc: '十字マークが建物の形に入っているよ。' },
+    { id: 'temple', name: '寺院', category: '宗教', desc: '「卍（まんじ）」というマークだよ。' },
+    { id: 'shrine', name: '神社', category: '宗教', desc: '鳥居（とりい）の形をしているよ。' },
+    { id: 'field', name: '畑', category: '土地利用', desc: '植物の二葉が芽生えた形。' },
+    { id: 'rice_field', name: '田', category: '土地利用', desc: '田んぼのあぜ道をデザインしたもの。' },
+    { id: 'orchard', name: '果樹園', category: '土地利用', desc: 'リンゴの形をデザインしているよ。' },
+    { id: 'park', name: '公園', category: '施設', desc: '木やベンチがある憩いの場。' },
+  ],
+  level2: [
+    { id: 'sdf', name: '自衛隊', category: '防衛', desc: '旗のような形。災害救助の拠点にもなる。' },
+    { id: 'meteo', name: '気象台', category: '公共施設', desc: '風速計の羽をデザインしたもの。' },
+    { id: 'power_plant', name: '発電所', category: 'インフラ', desc: '電気の回路をデザインしているよ。' },
+    { id: 'health_center', name: '保健所', category: '医療・公共', desc: '清潔な建物のイメージ。' },
+    { id: 'prosecutor', name: '検察庁', category: '司法', desc: '秋の霜が降りた菊の葉をイメージ。' },
+    { id: 'court', name: '裁判所', category: '司法', desc: '裁判を知らせる立て札の形。' },
+    { id: 'tax_office', name: '税務署', category: '公共施設', desc: 'そろばんの玉のデザイン。' },
+    { id: 'factory', name: '工場', category: '産業', desc: '歯車の形。都市計画で重要。' },
+    { id: 'library', name: '図書館', category: '教育', desc: '開いた本を上から見た形。' },
+    { id: 'bank', name: '銀行', category: '金融', desc: '昔のお金の形「分銅」から。' },
+    { id: 'museum', name: '博物館', category: '文化', desc: 'ギリシャ神殿のような立派な柱。' },
+    { id: 'high_school', name: '高等学校', category: '学校', desc: '「文」の周りに丸囲みがあるよ。' },
+  ],
+  level3: [
+    { id: 'electronic_base', name: '電子基準点', category: '測量', desc: '最新の測量ポイント。ひし形が特徴。' },
+    { id: 'radio_tower', name: '電波塔', category: '航空・通信', desc: 'パイロットが障害物として確認する重要な目印。' },
+    { id: 'chimney', name: '煙突', category: '測量・産業', desc: '高くそびえる構造物。目立つので目標物になる。' },
+    { id: 'triangulation', name: '三角点', category: '測量', desc: '地図作成の根幹。測量士の聖地。' },
+    { id: 'bench_mark', name: '水準点', category: '測量', desc: '高さを決める基準。道路脇によくある。' },
+    { id: 'important_port', name: '重要港', category: '海運・冒険', desc: '大きな船が停まれる特別な港。' },
+    { id: 'waste_land', name: '荒地', category: '地形・サバイバル', desc: '石が多く植物が育たない場所。' },
+    { id: 'coniferous', name: '針葉樹林', category: '地形', desc: '尖った木の形。寒冷地や山地に多い。' },
+    { id: 'broadleaf', name: '広葉樹林', category: '地形', desc: '丸い木の形。四季の変化がわかる。' },
+    { id: 'bamboo', name: '竹林', category: '地形', desc: '竹が生い茂っている場所。' },
+    { id: 'hot_spring', name: '温泉', category: '名所', desc: '地面から湯気が噴き出している様子。' },
+    { id: 'oil_well', name: '油井・ガス井', category: '資源', desc: 'エネルギーを採掘するやぐらの形。' },
+  ]
+};
+
+// 地図記号描画コンポーネント
+const MapIcon = ({ type, size = "32" }) => {
+  const stroke = "currentColor";
+  const fill = "none";
+  
+  switch (type) {
+    case 'school': return <span className="text-2xl font-bold">文</span>;
+    case 'post': return <span className="text-2xl font-bold">〒</span>;
+    case 'police': return <svg width={size} height={size} viewBox="0 0 100 100"><line x1="20" y1="20" x2="80" y2="80" stroke={stroke} strokeWidth="12"/><line x1="80" y1="20" x2="20" y2="80" stroke={stroke} strokeWidth="12"/></svg>;
+    case 'city_hall': return <svg width={size} height={size} viewBox="0 0 100 100"><circle cx="50" cy="50" r="38" fill={fill} stroke={stroke} strokeWidth="4"/><circle cx="50" cy="50" r="20" fill={fill} stroke={stroke} strokeWidth="10"/></svg>;
+    case 'fire_station': return <svg width={size} height={size} viewBox="0 0 100 100"><line x1="50" y1="20" x2="50" y2="80" stroke={stroke} strokeWidth="10"/><line x1="50" y1="25" x2="15" y2="45" stroke={stroke} strokeWidth="10"/><line x1="50" y1="25" x2="85" y2="45" stroke={stroke} strokeWidth="10"/></svg>;
+    case 'hospital': return <svg width={size} height={size} viewBox="0 0 100 100"><path d="M50 15 L85 35 V85 H15 V35 Z" fill={fill} stroke={stroke} strokeWidth="6"/><path d="M50 45 V75 M35 60 H65" stroke={stroke} strokeWidth="8"/></svg>;
+    case 'temple': return <span className="text-2xl font-bold">卍</span>;
+    case 'shrine': return <svg width={size} height={size} viewBox="0 0 100 100"><path d="M15 35 H85 M15 55 H85 M35 35 V85 M65 35 V85" fill={fill} stroke={stroke} strokeWidth="10"/></svg>;
+    case 'field': return <svg width={size} height={size} viewBox="0 0 100 100"><path d="M30 40 L50 75 L70 40" fill={fill} stroke={stroke} strokeWidth="12"/></svg>;
+    case 'rice_field': return <svg width={size} height={size} viewBox="0 0 100 100"><path d="M30 25 V75 M70 25 V75 M30 50 H70" fill={fill} stroke={stroke} strokeWidth="10"/></svg>;
+    case 'orchard': return <svg width={size} height={size} viewBox="0 0 100 100"><circle cx="50" cy="50" r="25" fill={fill} stroke={stroke} strokeWidth="8"/><line x1="50" y1="25" x2="50" y2="10" stroke={stroke} strokeWidth="8"/></svg>;
+    case 'park': return <svg width={size} height={size} viewBox="0 0 100 100"><circle cx="50" cy="40" r="15" fill={fill} stroke={stroke} strokeWidth="6"/><path d="M50 55 V80 M30 80 H70" stroke={stroke} strokeWidth="8"/></svg>;
+    
+    case 'sdf': return <svg width={size} height={size} viewBox="0 0 100 100"><path d="M25 15 V85 M25 15 H75 L60 40 L75 65 H25" fill={fill} stroke={stroke} strokeWidth="10"/></svg>;
+    case 'meteo': return <svg width={size} height={size} viewBox="0 0 100 100"><circle cx="50" cy="50" r="15" fill={fill} stroke={stroke} strokeWidth="6"/><path d="M50 35 V15 M50 65 V85 M35 50 H15 M65 50 H85" stroke={stroke} strokeWidth="8"/></svg>;
+    case 'power_plant': return <svg width={size} height={size} viewBox="0 0 100 100"><circle cx="50" cy="50" r="35" fill={fill} stroke={stroke} strokeWidth="6"/><path d="M30 30 L70 70 M70 30 L30 70" stroke={stroke} strokeWidth="8"/></svg>;
+    case 'health_center': return <svg width={size} height={size} viewBox="0 0 100 100"><rect x="20" y="30" width="60" height="50" fill={fill} stroke={stroke} strokeWidth="6"/><path d="M50 15 V30" stroke={stroke} strokeWidth="8"/></svg>;
+    case 'prosecutor': return <svg width={size} height={size} viewBox="0 0 100 100"><path d="M50 15 L80 50 L50 85 L20 50 Z" fill={fill} stroke={stroke} strokeWidth="6"/><circle cx="50" cy="50" r="8" fill="currentColor"/></svg>;
+    case 'high_school': return <div className="relative"><span className="text-xl font-bold">文</span><div className="absolute inset-0 border-2 border-current rounded-full -m-1"></div></div>;
+    case 'bank': return <svg width={size} height={size} viewBox="0 0 100 100"><path d="M50 20 C25 20 25 80 50 80 C75 80 75 20 50 20" fill={fill} stroke={stroke} strokeWidth="10"/></svg>;
+    case 'museum': return <svg width={size} height={size} viewBox="0 0 100 100"><path d="M15 80 H85 M25 80 V45 M50 80 V45 M75 80 V45 M15 45 H85 L50 15 Z" fill={fill} stroke={stroke} strokeWidth="6"/></svg>;
+    case 'court': return <svg width={size} height={size} viewBox="0 0 100 100"><path d="M50 15 L85 80 H15 Z" fill={fill} stroke={stroke} strokeWidth="10"/><line x1="30" y1="80" x2="70" y2="80" stroke={stroke} strokeWidth="15"/></svg>;
+    case 'tax_office': return <svg width={size} height={size} viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill={fill} stroke={stroke} strokeWidth="6"/><line x1="20" y1="50" x2="80" y2="50" stroke={stroke} strokeWidth="6"/><circle cx="50" cy="30" r="6" fill="currentColor"/><circle cx="50" cy="70" r="6" fill="currentColor"/></svg>;
+    case 'factory': return <svg width={size} height={size} viewBox="0 0 100 100"><circle cx="50" cy="50" r="28" fill={fill} stroke={stroke} strokeWidth="6"/><path d="M50 10 V25 M50 75 V90 M10 50 H25 M75 50 H90" stroke={stroke} strokeWidth="10"/></svg>;
+    case 'library': return <svg width={size} height={size} viewBox="0 0 100 100"><path d="M20 30 Q50 20 80 30 V80 Q50 70 20 80 Z" fill={fill} stroke={stroke} strokeWidth="8"/><line x1="50" y1="25" x2="50" y2="75" stroke={stroke} strokeWidth="4"/></svg>;
+
+    case 'electronic_base': return <svg width={size} height={size} viewBox="0 0 100 100"><path d="M50 15 L85 50 L50 85 L15 50 Z" fill={fill} stroke={stroke} strokeWidth="5"/><rect x="42" y="42" width="16" height="16" fill="currentColor"/></svg>;
+    case 'radio_tower': return <svg width={size} height={size} viewBox="0 0 100 100"><path d="M50 10 L80 90 M50 10 L20 90 M20 90 H80 M35 50 H65 M42 30 H58" fill={fill} stroke={stroke} strokeWidth="6"/></svg>;
+    case 'chimney': return <svg width={size} height={size} viewBox="0 0 100 100"><rect x="35" y="15" width="30" height="70" fill={fill} stroke={stroke} strokeWidth="8"/><path d="M35 30 H65 M35 50 H65 M35 70 H65" stroke={stroke} strokeWidth="4"/></svg>;
+    case 'triangulation': return <svg width={size} height={size} viewBox="0 0 100 100"><path d="M50 15 L90 85 H10 Z" fill={fill} stroke={stroke} strokeWidth="6"/><circle cx="50" cy="55" r="8" fill="currentColor"/></svg>;
+    case 'bench_mark': return <svg width={size} height={size} viewBox="0 0 100 100"><rect x="20" y="45" width="60" height="35" fill={fill} stroke={stroke} strokeWidth="8"/><circle cx="50" cy="62" r="8" fill="currentColor"/></svg>;
+    case 'important_port': return <svg width={size} height={size} viewBox="0 0 100 100"><path d="M50 15 V80 M30 40 H70 M30 65 Q30 90 50 90 Q70 90 70 65" fill={fill} stroke={stroke} strokeWidth="10"/></svg>;
+    case 'waste_land': return <svg width={size} height={size} viewBox="0 0 100 100"><path d="M20 30 L30 50 L20 70 M50 30 L60 50 L50 70 M80 30 L90 50 L80 70" fill={fill} stroke={stroke} strokeWidth="8"/></svg>;
+    case 'coniferous': return <svg width={size} height={size} viewBox="0 0 100 100"><path d="M50 20 L80 80 H20 Z" fill={fill} stroke={stroke} strokeWidth="8"/><line x1="50" y1="80" x2="50" y2="90" stroke={stroke} strokeWidth="8"/></svg>;
+    case 'broadleaf': return <svg width={size} height={size} viewBox="0 0 100 100"><circle cx="50" cy="45" r="25" fill={fill} stroke={stroke} strokeWidth="8"/><line x1="50" y1="70" x2="50" y2="85" stroke={stroke} strokeWidth="8"/></svg>;
+    case 'bamboo': return <svg width={size} height={size} viewBox="0 0 100 100"><path d="M30 20 V85 M50 15 V80 M70 20 V85" fill={fill} stroke={stroke} strokeWidth="8"/><path d="M25 40 H35 M45 35 H55 M65 40 H75" stroke={stroke} strokeWidth="8"/></svg>;
+    case 'hot_spring': return <svg width={size} height={size} viewBox="0 0 100 100"><ellipse cx="50" cy="80" rx="35" ry="12" fill={fill} stroke={stroke} strokeWidth="8"/><path d="M35 55 Q40 30 35 15 M50 55 Q55 30 50 15 M65 55 Q70 30 65 15" fill={fill} stroke={stroke} strokeWidth="6"/></svg>;
+    case 'oil_well': return <svg width={size} height={size} viewBox="0 0 100 100"><rect x="25" y="25" width="50" height="50" fill={fill} stroke={stroke} strokeWidth="8"/><path d="M25 25 L75 75 M75 25 L25 75" stroke={stroke} strokeWidth="8"/></svg>;
+    default: return <span className="text-xl font-bold">?</span>;
+  }
+};
+
+export default function App() {
+  const [screen, setScreen] = useState('landing');
+  const [level, setLevel] = useState(null);
+  const [blocks, setBlocks] = useState([]);
+  const [targetSymbol, setTargetSymbol] = useState(null);
+  const [missionCount, setMissionCount] = useState(0);
+  const [score, setScore] = useState(0);
+  const [message, setMessage] = useState('');
+  const [showHint, setShowHint] = useState(false);
+
+  // ブロック数を48個に増加
+  const initGame = (lvl) => {
+    const symbolsPool = SYMBOLS[`level${lvl}`];
+    const newBlocks = [];
+    for (let i = 0; i < 48; i++) {
+      const randomSymbol = symbolsPool[Math.floor(Math.random() * symbolsPool.length)];
+      newBlocks.push({ ...randomSymbol, id_instance: i, visible: true });
+    }
+    setBlocks(newBlocks);
+    setLevel(lvl);
+    setScreen('game');
+    setScore(0);
+    generateMission(newBlocks, lvl);
+  };
+
+  const generateMission = (currentBlocks, lvl) => {
+    const visibleBlocks = currentBlocks.filter(b => b.visible);
+    if (visibleBlocks.length === 0) {
+      setScreen('result');
+      return;
+    }
+    const uniqueIds = [...new Set(visibleBlocks.map(b => b.id))];
+    const randomId = uniqueIds[Math.floor(Math.random() * uniqueIds.length)];
+    const target = SYMBOLS[`level${lvl}`].find(s => s.id === randomId);
+    const countOnBoard = visibleBlocks.filter(b => b.id === randomId).length;
+    
+    // ターゲット数を少し多めに設定して難易度調整
+    const missionNum = Math.min(countOnBoard, 4);
+
+    setTargetSymbol(target);
+    setMissionCount(missionNum);
+    setMessage(`${target.name}を ${missionNum}つ みつけて！`);
+    setShowHint(false);
+  };
+
+  const handleBlockClick = (block) => {
+    if (block.id === targetSymbol.id) {
+      setBlocks(prev => prev.map(b => b.id_instance === block.id_instance ? { ...b, visible: false } : b));
+      setMissionCount(prev => {
+        const next = prev - 1;
+        if (next === 0) {
+          setScore(s => s + 15);
+          setMessage('任務完了！次へ急げ！');
+          setTimeout(() => {
+            setBlocks(current => {
+              generateMission(current, level);
+              return current;
+            });
+          }, 600);
+        } else {
+          setMessage(`確認！ あと ${next}つ！`);
+        }
+        return next;
+      });
+    } else {
+      setMessage('誤認だ！それは違う！');
+      setShowHint(true);
+      setTimeout(() => {
+        setMessage(`${targetSymbol.name}を ${missionCount}つ 探せ！`);
+        setShowHint(false);
+      }, 1200);
+    }
+  };
+
+  const MinecraftBg = () => (
+    <div className="fixed inset-0 pointer-events-none overflow-hidden z-0 bg-[#74b44a]">
+      <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <pattern id="pixel-grid" width="120" height="120" patternUnits="userSpaceOnUse">
+            <rect width="120" height="120" fill="#74b44a" />
+            <rect width="25" height="25" x="15" y="15" fill="#6ba342" />
+            <rect width="40" height="40" x="70" y="50" fill="#7ebc52" />
+            <rect width="20" height="20" x="35" y="80" fill="#63983d" />
+            <rect width="12" height="12" x="90" y="90" fill="#88c95a" />
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#pixel-grid)" />
+      </svg>
+      <div className="absolute top-10 left-[5%] w-56 h-14 bg-white/30 rounded-sm"></div>
+      <div className="absolute top-48 left-[75%] w-72 h-20 bg-white/30 rounded-sm"></div>
+      <div className="absolute top-0 bottom-0 left-[25%] w-32 bg-[#4a89cc] opacity-20"></div>
+    </div>
+  );
+
+  const DictionaryScreen = () => (
+    <div className="relative z-10 animate-in fade-in duration-500 max-w-5xl mx-auto">
+      <div className="bg-white/95 backdrop-blur-sm rounded-3xl p-6 md:p-8 shadow-2xl border-4 border-slate-400">
+        <div className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
+          <button onClick={() => setScreen('landing')} className="flex items-center gap-2 text-slate-500 hover:text-indigo-600 font-bold px-4 py-2 bg-slate-100 rounded-xl transition-colors">
+            <ArrowLeft size={20} /> もどる
+          </button>
+          <h2 className="text-3xl font-black text-slate-800">地図記号作戦図鑑</h2>
+          <div className="w-20 hidden sm:block"></div>
+        </div>
+
+        <div className="space-y-12">
+          {Object.entries(SYMBOLS).map(([lvl, symbols], index) => (
+            <div key={lvl} className="animate-in fade-in slide-in-from-bottom-4" style={{ animationDelay: `${index * 150}ms` }}>
+              <div className="flex items-center gap-3 mb-6 border-b-4 border-slate-200 pb-2">
+                <span className="text-3xl">
+                  {index === 0 ? <Globe className="text-emerald-500" /> : 
+                   index === 1 ? <Landmark className="text-blue-500" /> : 
+                   <Plane className="text-slate-600" />}
+                </span>
+                <h3 className="text-2xl font-black text-slate-700">
+                  {index === 0 ? '基本：市民の地図' : 
+                   index === 1 ? '専門：都市計画と公共機能' : 
+                   '精鋭：測量・航空・特殊地形'}
+                </h3>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {symbols.map((s) => (
+                  <div key={s.id} className="flex gap-4 p-4 bg-white rounded-2xl border-2 border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="w-14 h-14 shrink-0 bg-slate-50 rounded-xl flex items-center justify-center shadow-inner border border-slate-200">
+                      <MapIcon type={s.id} size="28" />
+                    </div>
+                    <div>
+                      <h4 className="font-black text-slate-800 text-base">{s.name}</h4>
+                      <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">{s.category}</p>
+                      <p className="text-xs text-slate-600 leading-tight mt-1">{s.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-12 text-center">
+          <button 
+            onClick={() => setScreen('home')}
+            className="bg-slate-800 hover:bg-slate-900 text-white text-xl font-black py-4 px-12 rounded-full shadow-lg transform hover:-translate-y-1 transition-all flex items-center gap-3 mx-auto"
+          >
+            全記号確認済み。任務を開始する 🚀
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  const LandingScreen = () => (
+    <div className="relative z-10 animate-in fade-in duration-700 max-w-4xl mx-auto">
+      <div className="relative h-64 md:h-80 w-full rounded-3xl overflow-hidden mb-10 shadow-2xl border-4 border-white">
+        <div className="absolute inset-0 bg-slate-900/80 flex flex-col items-center justify-center text-white p-6 text-center">
+          <Compass className="w-20 h-20 mb-4 text-yellow-400 animate-pulse" />
+          <h1 className="text-4xl md:text-5xl font-black mb-2 tracking-tighter drop-shadow-lg">精鋭地図博士への道</h1>
+          <p className="text-slate-300 font-bold max-w-lg">
+            測量士からパイロットまで、プロが見る景色をマスターせよ。<br />
+            地形を読み解く力は、君を最強の冒険者にする。
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+        <div className="bg-white/95 backdrop-blur-sm p-8 rounded-3xl shadow-lg border-2 border-indigo-100">
+          <div className="flex items-center gap-3 mb-4 text-indigo-700">
+            <Search className="w-8 h-8" />
+            <h2 className="text-2xl font-black">プロが記号を見る理由</h2>
+          </div>
+          <p className="text-slate-600 leading-relaxed font-medium">
+            パイロットは高い煙突や電波塔を「回避すべき障害物」として見ます。救助隊は「荒地」や「竹林」の記号から、車両が通れるかを判断します。記号とは、地図に刻まれた<span className="text-indigo-600 font-bold">「現場の真実」</span>なのです。
+          </p>
+        </div>
+
+        <div className="bg-white/95 backdrop-blur-sm p-8 rounded-3xl shadow-lg border-2 border-orange-100">
+          <div className="flex items-center gap-3 mb-4 text-orange-700">
+            <ShieldCheck className="w-8 h-8" />
+            <h2 className="text-2xl font-black">エキスパートの視点</h2>
+          </div>
+          <ul className="space-y-3">
+            <li className="flex gap-3 items-center">
+              <div className="p-2 bg-orange-100 rounded-lg text-orange-700"><HardHat size={20}/></div>
+              <p className="text-sm font-bold text-slate-700">測量・都市計画：電子基準点を頼りに世界を測る</p>
+            </li>
+            <li className="flex gap-3 items-center">
+              <div className="p-2 bg-blue-100 rounded-lg text-blue-700"><Wind size={20}/></div>
+              <p className="text-sm font-bold text-slate-700">災害対策：気象台や自衛隊と連携し命を守る</p>
+            </li>
+            <li className="flex gap-3 items-center">
+              <div className="p-2 bg-slate-100 rounded-lg text-slate-700"><Plane size={20}/></div>
+              <p className="text-sm font-bold text-slate-700">航空・冒険：目標物を確認し、未知の領域へ</p>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
+        <button 
+          onClick={() => setScreen('dictionary')}
+          className="bg-emerald-600 hover:bg-emerald-700 text-white text-xl font-black py-5 px-10 rounded-2xl shadow-xl transform hover:-translate-y-1 transition-all active:scale-95 flex items-center gap-3 border-b-8 border-emerald-900"
+        >
+          <List size={28} /> 全記号を叩き込む
+        </button>
+        <button 
+          onClick={() => setScreen('home')}
+          className="bg-slate-800 hover:bg-slate-900 text-white text-xl font-black py-5 px-10 rounded-2xl shadow-xl transform hover:-translate-y-1 transition-all active:scale-95 flex items-center gap-3 border-b-8 border-slate-950"
+        >
+          🚀 作戦開始（修行）
+        </button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen relative font-sans text-slate-800 p-4 md:p-8">
+      <MinecraftBg />
+      
+      <div className="max-w-5xl mx-auto relative z-10">
+        
+        {screen === 'landing' && <LandingScreen />}
+        {screen === 'dictionary' && <DictionaryScreen />}
+
+        {screen === 'home' && (
+          <div className="bg-white/95 backdrop-blur-sm rounded-3xl p-8 shadow-xl border-4 border-slate-300 animate-in slide-in-from-right-8 duration-500 max-w-3xl mx-auto">
+            <button onClick={() => setScreen('landing')} className="mb-6 flex items-center gap-1 text-slate-400 hover:text-slate-800 font-bold transition-colors">
+              <ArrowLeft size={20} /> トップページへ
+            </button>
+            <h2 className="text-3xl font-black text-center mb-8 text-slate-800 italic">MISSION SELECT</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {[1, 2, 3].map((lvl) => (
+                <button
+                  key={lvl}
+                  onClick={() => initGame(lvl)}
+                  className="group relative overflow-hidden bg-white hover:bg-slate-50 border-4 border-slate-800 rounded-2xl p-6 transition-all transform hover:-translate-y-1 active:scale-95 shadow-[8px_8px_0px_rgba(0,0,0,0.1)] text-center"
+                >
+                  <div className="text-5xl mb-4 group-hover:rotate-12 transition-transform">
+                    {lvl === 1 ? '🔰' : lvl === 2 ? '🛡️' : '🦅'}
+                  </div>
+                  <div className="text-lg font-black text-slate-900">LEVEL {lvl}</div>
+                  <div className="text-[10px] text-slate-500 mt-2 font-black uppercase tracking-widest">
+                    {lvl === 1 ? 'Citizens' : lvl === 2 ? 'Specialist' : 'Expert'}
+                  </div>
+                </button>
+              ))}
+            </div>
+            
+            <div className="mt-12 p-6 bg-slate-900 rounded-2xl border-l-8 border-yellow-400">
+              <h3 className="font-bold text-yellow-400 mb-2 flex items-center gap-2">
+                <BookOpen size={20} /> 任務要綱
+              </h3>
+              <p className="text-slate-300 text-sm font-medium leading-loose">
+                指示された記号を、広大なマップ（48個のブロック）から探し出せ。<br />
+                ブロック数が多いため、スクロールして隅々まで確認すること。<br />
+                プロは一瞬の判断ミスも許されない。正確に、かつ迅速に。
+              </p>
+            </div>
+          </div>
+        )}
+
+        {screen === 'game' && (
+          <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="flex justify-between items-center bg-white/95 p-4 rounded-2xl shadow-md border-2 border-slate-200">
+              <button onClick={() => setScreen('home')} className="flex items-center gap-1 text-slate-500 hover:text-slate-900 font-bold">
+                <ArrowLeft size={20} /> 撤退
+              </button>
+              <div className="flex items-center gap-4">
+                <div className="text-slate-800 font-black px-3 py-1 bg-slate-100 rounded-lg border border-slate-300">MISSION: LV{level}</div>
+                <div className="text-emerald-600 font-black flex items-center gap-1">
+                   POINT: {score}
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-slate-800 p-6 md:p-8 rounded-3xl text-white text-center shadow-2xl border-b-8 border-slate-950 transition-all min-h-[140px] flex flex-col items-center justify-center relative overflow-hidden">
+              <div className="absolute top-0 left-0 p-4 opacity-5"><Globe size={100} /></div>
+              <h2 className="text-2xl md:text-4xl font-black mb-2 relative z-10 tracking-tight">{message}</h2>
+              <div className={`transition-all duration-300 transform ${showHint ? 'opacity-100 scale-100 mt-2' : 'opacity-0 scale-50 pointer-events-none h-0'}`}>
+                 <div className="bg-white text-slate-900 w-14 h-14 rounded-xl flex items-center justify-center shadow-lg mx-auto border-4 border-yellow-400">
+                    {targetSymbol && <MapIcon type={targetSymbol.id} size="28" />}
+                 </div>
+              </div>
+            </div>
+
+            {/* ブロックを小さくし、48個並べる */}
+            <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2 pb-10 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+              {blocks.map((block) => (
+                <button
+                  key={block.id_instance}
+                  onClick={() => handleBlockClick(block)}
+                  disabled={!block.visible}
+                  className={`aspect-square rounded-xl flex items-center justify-center transition-all duration-200 ${block.visible ? 'bg-white/95 backdrop-blur-sm shadow-sm hover:bg-slate-50 hover:shadow-md hover:-translate-y-1 active:scale-90 border-b-2 border-slate-200' : 'opacity-0 pointer-events-none scale-0'}`}
+                >
+                  <div className="text-slate-700 scale-90"><MapIcon type={block.id} size="24" /></div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {screen === 'result' && (
+          <div className="bg-slate-900 rounded-3xl p-10 shadow-2xl border-t-8 border-yellow-400 text-center animate-in zoom-in duration-500">
+            <Trophy className="w-20 h-20 text-yellow-400 mx-auto mb-4" />
+            <h2 className="text-4xl font-black text-white mb-2">MISSION ACCOMPLISHED</h2>
+            <p className="text-xl text-slate-400 mb-8 font-bold">君の地理的リテラシーは、プロの領域に達した。</p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <button onClick={() => setScreen('home')} className="bg-white text-slate-900 font-black py-4 px-8 rounded-2xl transition-all shadow-lg text-lg hover:bg-slate-100">
+                次の戦域へ
+              </button>
+              <button onClick={() => initGame(level)} className="bg-yellow-400 text-slate-900 font-black py-4 px-8 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-lg text-lg hover:bg-yellow-500">
+                <RefreshCcw size={20} /> 再訓練
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <style>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: rgba(0, 0, 0, 0.2);
+          border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: rgba(0, 0, 0, 0.3);
+        }
+      `}</style>
+    </div>
+  );
+}
