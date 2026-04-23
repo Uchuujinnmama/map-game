@@ -3,496 +3,78 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>精鋭地図博士への道</title>
+    <title>Web App</title>
     <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- React and ReactDOM -->
-    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <!-- Babel for JSX transpiling -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="https://unpkg.com/lucide-react@latest"></script>
     <style>
-        @keyframes shake {
-            0% { transform: translate(1px, 1px) rotate(0deg); }
-            10% { transform: translate(-1px, -2px) rotate(-1deg); }
-            20% { transform: translate(-3px, 0px) rotate(1deg); }
-            30% { transform: translate(3px, 2px) rotate(0deg); }
-            40% { transform: translate(1px, -1px) rotate(1deg); }
-            50% { transform: translate(-1px, 2px) rotate(-1deg); }
-            60% { transform: translate(-3px, 1px) rotate(0deg); }
-            70% { transform: translate(3px, 1px) rotate(-1deg); }
-            80% { transform: translate(-1px, -1px) rotate(1deg); }
-            90% { transform: translate(1px, 2px) rotate(0deg); }
-            100% { transform: translate(1px, -2px) rotate(-1deg); }
-        }
-        .shake-animation {
-            animation: shake 0.1s infinite;
-        }
         body {
-            margin: 0;
-            overflow-x: hidden;
+            background-color: #f3f4f6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: sans-serif;
+        }
+        #error-display {
+            display: none;
+            background: #fee2e2;
+            color: #b91c1c;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-top: 1rem;
+            max-width: 90%;
+            word-break: break-all;
         }
     </style>
 </head>
 <body>
-    <div id="root"></div>
 
-    <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
-        const { 
-            Trophy, Star, ArrowLeft, RefreshCcw, HelpCircle, Map, Compass, 
-            HardHat, ShieldCheck, Plane, Search, BookOpen, Globe, List, 
-            Radio, Wind, Flame, Landmark, Timer, Skull, AlertOctagon, Volume2 
-        } = lucide;
+    <div id="app" class="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full text-center">
+        <h1 class="text-2xl font-bold text-gray-800 mb-4">アプリが正常に起動しました</h1>
+        <p class="text-gray-600 mb-6">GitHub Pagesでの表示を確認できました。</p>
+        
+        <div id="content" class="space-y-4">
+            <button onclick="changeColor()" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-full transition-colors">
+                背景色を変える
+            </button>
+            <p id="counter-text" class="text-sm text-gray-400">クリック数: 0</p>
+        </div>
+    </div>
 
-        // 地図記号データの定義
-        const SYMBOLS = {
-            level1: [
-                { id: 'school', name: '小・中学校', category: '学校', desc: '「文」の文字をデザインしたもの。' },
-                { id: 'post', name: '郵便局', category: '公共施設', desc: '昔の郵便マーク「〒」から。' },
-                { id: 'police', name: '交番', category: '警察', desc: '警棒をクロスさせた形。' },
-                { id: 'city_hall', name: '市役所', category: '公共施設', desc: '二重の丸は大きな役所を表すよ。' },
-                { id: 'fire_station', name: '消防署', category: '公共施設', desc: '火消しの道具「さすまた」の形。' },
-                { id: 'hospital', name: '病院', category: '医療', desc: '十字マークが建物の形に入っているよ。' },
-                { id: 'temple', name: '寺院', category: '宗教', desc: '「卍（まんじ）」というマークだよ。' },
-                { id: 'shrine', name: '神社', category: '宗教', desc: '鳥居（とりい）の形をしているよ。' },
-                { id: 'field', name: '畑', category: '土地利用', desc: '植物の二葉が芽生えた形。' },
-                { id: 'rice_field', name: '田', category: '土地利用', desc: '田んぼのあぜ道をデザインしたもの。' },
-                { id: 'orchard', name: '果樹園', category: '土地利用', desc: 'リンゴの形をデザインしているよ。' },
-                { id: 'park', name: '公園', category: '施設', desc: '木やベンチがある憩いの場。' },
-            ],
-            level2: [
-                { id: 'sdf', name: '自衛隊', category: '防衛', desc: '旗のような形。災害救助の拠点にもなる。' },
-                { id: 'meteo', name: '気象台', category: '公共施設', desc: '風速計の羽をデザインしたもの。' },
-                { id: 'power_plant', name: '発電所', category: 'インフラ', desc: '電気の回路をデザインしているよ。' },
-                { id: 'health_center', name: '保健所', category: '医療・公共', desc: '清潔な建物のイメージ。' },
-                { id: 'prosecutor', name: '検察庁', category: '司法', desc: '秋の霜が降りた菊の葉をイメージ。' },
-                { id: 'court', name: '裁判所', category: '司法', desc: '裁判を知らせる立て札の形。' },
-                { id: 'tax_office', name: '税務署', category: '公共施設', desc: 'そろばんの玉のデザイン。' },
-                { id: 'factory', name: '工場', category: '産業', desc: '歯車の形。都市計画で重要。' },
-                { id: 'library', name: '図書館', category: '教育', desc: '開いた本を上から見た形。' },
-                { id: 'bank', name: '銀行', category: '金融', desc: '昔のお金の形「分銅」から。' },
-                { id: 'museum', name: '博物館', category: '文化', desc: 'ギリシャ神殿のような立派な柱。' },
-                { id: 'high_school', name: '高等学校', category: '学校', desc: '「文」の周りに丸囲みがあるよ。' },
-            ],
-            level3: [
-                { id: 'electronic_base', name: '電子基準点', category: '測量', desc: '最新の測量ポイント。ひし形が特徴。' },
-                { id: 'radio_tower', name: '電波塔', category: '航空・通信', desc: 'パイロットが障害物として確認する重要な目印。' },
-                { id: 'chimney', name: '煙突', category: '測量・産業', desc: '高くそびえる構造物。目立つので目標物になる。' },
-                { id: 'triangulation', name: '三角点', category: '測量', desc: '地図作成の根幹。測量士の聖地。' },
-                { id: 'bench_mark', name: '水準点', category: '測量', desc: '高さを決める基準。道路脇によくある。' },
-                { id: 'important_port', name: '重要港', category: '海運・冒険', desc: '大きな船が停まれる特別な港。' },
-                { id: 'waste_land', name: '荒地', category: '地形・サバイバル', desc: '石が多く植物が育たない場所。' },
-                { id: 'coniferous', name: '針葉樹林', category: '地形', desc: '尖った木の形。寒冷地や山地に多い。' },
-                { id: 'broadleaf', name: '広葉樹林', category: '地形', desc: '丸い木の形。四季の変化がわかる。' },
-                { id: 'bamboo', name: '竹林', category: '地形', desc: '竹が生い茂っている場所。' },
-                { id: 'hot_spring', name: '温泉', category: '名所', desc: '地面から湯気が噴き出している様子。' },
-                { id: 'oil_well', name: '油井・ガス井', category: '資源', desc: 'エネルギーを採掘するやぐらの形。' },
-            ]
+    <!-- 万が一JavaScriptでエラーが出た時に表示されるエリア -->
+    <div id="error-display">
+        <strong>エラーが発生しました:</strong>
+        <p id="error-message"></p>
+    </div>
+
+    <script>
+        // エラーハンドリング: 真っ白になるのを防ぐためにログを表示
+        window.onerror = function(msg, url, line) {
+            const errorDisplay = document.getElementById('error-display');
+            const errorMsg = document.getElementById('error-message');
+            errorDisplay.style.display = 'block';
+            errorMsg.innerText = msg + " (Line: " + line + ")";
+            return false;
         };
 
-        const ALL_SYMBOLS = [...SYMBOLS.level1, ...SYMBOLS.level2, ...SYMBOLS.level3];
+        let count = 0;
 
-        const playSound = (type) => {
-            const AudioContext = window.AudioContext || window.webkitAudioContext;
-            if (!AudioContext) return;
-            const ctx = new AudioContext();
-
-            const playTone = (freq, type, duration, volume = 0.1) => {
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-                osc.type = type;
-                osc.frequency.setValueAtTime(freq, ctx.currentTime);
-                gain.gain.setValueAtTime(volume, ctx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-                osc.start();
-                osc.stop(ctx.currentTime + duration);
-            };
-
-            switch (type) {
-                case 'correct':
-                    playTone(660, 'sine', 0.1);
-                    setTimeout(() => playTone(880, 'sine', 0.2), 100);
-                    break;
-                case 'wrong':
-                    playTone(220, 'sawtooth', 0.3, 0.05);
-                    playTone(233, 'sawtooth', 0.3, 0.05);
-                    break;
-                case 'siren':
-                    const osc = ctx.createOscillator();
-                    const gain = ctx.createGain();
-                    osc.type = 'triangle';
-                    osc.frequency.setValueAtTime(440, ctx.currentTime);
-                    osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.5);
-                    osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 1.0);
-                    gain.gain.setValueAtTime(0.05, ctx.currentTime);
-                    gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 1.0);
-                    osc.connect(gain);
-                    gain.connect(ctx.destination);
-                    osc.start();
-                    osc.stop(ctx.currentTime + 1.0);
-                    break;
-                case 'explosion':
-                    const bufferSize = ctx.sampleRate * 2;
-                    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-                    const data = buffer.getChannelData(0);
-                    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
-                    const noise = ctx.createBufferSource();
-                    noise.buffer = buffer;
-                    const noiseGain = ctx.createGain();
-                    noiseGain.gain.setValueAtTime(0.2, ctx.currentTime);
-                    noiseGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 2.0);
-                    noise.connect(noiseGain);
-                    noiseGain.connect(ctx.destination);
-                    noise.start();
-                    break;
-            }
-        };
-
-        const MapIcon = ({ type, size = "32" }) => {
-            const stroke = "currentColor";
-            const fill = "none";
+        function changeColor() {
+            count++;
+            const colors = ['#eff6ff', '#f0fdf4', '#fff7ed', '#faf5ff', '#fff1f2'];
+            const randomColor = colors[Math.floor(Math.random() * colors.length)];
+            document.body.style.backgroundColor = randomColor;
             
-            switch (type) {
-                case 'school': return <span className="text-2xl font-bold">文</span>;
-                case 'post': return <span className="text-2xl font-bold">〒</span>;
-                case 'police': return <svg width={size} height={size} viewBox="0 0 100 100"><line x1="20" y1="20" x2="80" y2="80" stroke={stroke} strokeWidth="12"/><line x1="80" y1="20" x2="20" y2="80" stroke={stroke} strokeWidth="12"/></svg>;
-                case 'city_hall': return <svg width={size} height={size} viewBox="0 0 100 100"><circle cx="50" cy="50" r="38" fill={fill} stroke={stroke} strokeWidth="4"/><circle cx="50" cy="50" r="20" fill={fill} stroke={stroke} strokeWidth="10"/></svg>;
-                case 'fire_station': return <svg width={size} height={size} viewBox="0 0 100 100"><line x1="50" y1="20" x2="50" y2="80" stroke={stroke} strokeWidth="10"/><line x1="50" y1="25" x2="15" y2="45" stroke={stroke} strokeWidth="10"/><line x1="50" y1="25" x2="85" y2="45" stroke={stroke} strokeWidth="10"/></svg>;
-                case 'hospital': return <svg width={size} height={size} viewBox="0 0 100 100"><path d="M50 15 L85 35 V85 H15 V35 Z" fill={fill} stroke={stroke} strokeWidth="6"/><path d="M50 45 V75 M35 60 H65" stroke={stroke} strokeWidth="8"/></svg>;
-                case 'temple': return <span className="text-2xl font-bold">卍</span>;
-                case 'shrine': return <svg width={size} height={size} viewBox="0 0 100 100"><path d="M15 35 H85 M15 55 H85 M35 35 V85 M65 35 V85" fill={fill} stroke={stroke} strokeWidth="10"/></svg>;
-                case 'field': return <svg width={size} height={size} viewBox="0 0 100 100"><path d="M30 40 L50 75 L70 40" fill={fill} stroke={stroke} strokeWidth="12"/></svg>;
-                case 'rice_field': return <svg width={size} height={size} viewBox="0 0 100 100"><path d="M30 25 V75 M70 25 V75 M30 50 H70" fill={fill} stroke={stroke} strokeWidth="10"/></svg>;
-                case 'orchard': return <svg width={size} height={size} viewBox="0 0 100 100"><circle cx="50" cy="50" r="25" fill={fill} stroke={stroke} strokeWidth="8"/><line x1="50" y1="25" x2="50" y2="10" stroke={stroke} strokeWidth="8"/></svg>;
-                case 'park': return <svg width={size} height={size} viewBox="0 0 100 100"><circle cx="50" cy="40" r="15" fill={fill} stroke={stroke} strokeWidth="6"/><path d="M50 55 V80 M30 80 H70" stroke={stroke} strokeWidth="8"/></svg>;
-                case 'sdf': return <svg width={size} height={size} viewBox="0 0 100 100"><path d="M25 15 V85 M25 15 H75 L60 40 L75 65 H25" fill={fill} stroke={stroke} strokeWidth="10"/></svg>;
-                case 'meteo': return <svg width={size} height={size} viewBox="0 0 100 100"><circle cx="50" cy="50" r="15" fill={fill} stroke={stroke} strokeWidth="6"/><path d="M50 35 V15 M50 65 V85 M35 50 H15 M65 50 H85" stroke={stroke} strokeWidth="8"/></svg>;
-                case 'power_plant': return <svg width={size} height={size} viewBox="0 0 100 100"><circle cx="50" cy="50" r="35" fill={fill} stroke={stroke} strokeWidth="6"/><path d="M30 30 L70 70 M70 30 L30 70" stroke={stroke} strokeWidth="8"/></svg>;
-                case 'health_center': return <svg width={size} height={size} viewBox="0 0 100 100"><rect x="20" y="30" width="60" height="50" fill={fill} stroke={stroke} strokeWidth="6"/><path d="M50 15 V30" stroke={stroke} strokeWidth="8"/></svg>;
-                case 'prosecutor': return <svg width={size} height={size} viewBox="0 0 100 100"><path d="M50 15 L80 50 L50 85 L20 50 Z" fill={fill} stroke={stroke} strokeWidth="6"/><circle cx="50" cy="50" r="8" fill="currentColor"/></svg>;
-                case 'high_school': return <div className="relative flex items-center justify-center w-8 h-8"><span className="text-xl font-bold leading-none">文</span><div className="absolute inset-0 border-2 border-current rounded-full"></div></div>;
-                case 'bank': return <svg width={size} height={size} viewBox="0 0 100 100"><path d="M50 20 C25 20 25 80 50 80 C75 80 75 20 50 20" fill={fill} stroke={stroke} strokeWidth="10"/></svg>;
-                case 'museum': return <svg width={size} height={size} viewBox="0 0 100 100"><path d="M15 80 H85 M25 80 V45 M50 80 V45 M75 80 V45 M15 45 H85 L50 15 Z" fill={fill} stroke={stroke} strokeWidth="6"/></svg>;
-                case 'court': return <svg width={size} height={size} viewBox="0 0 100 100"><path d="M50 15 L85 80 H15 Z" fill={fill} stroke={stroke} strokeWidth="10"/><line x1="30" y1="80" x2="70" y2="80" stroke={stroke} strokeWidth="15"/></svg>;
-                case 'tax_office': return <svg width={size} height={size} viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill={fill} stroke={stroke} strokeWidth="6"/><line x1="20" y1="50" x2="80" y2="50" stroke={stroke} strokeWidth="6"/><circle cx="50" cy="30" r="6" fill="currentColor"/><circle cx="50" cy="70" r="6" fill="currentColor"/></svg>;
-                case 'factory': return <svg width={size} height={size} viewBox="0 0 100 100"><circle cx="50" cy="50" r="28" fill={fill} stroke={stroke} strokeWidth="6"/><path d="M50 10 V25 M50 75 V90 M10 50 H25 M75 50 H90" stroke={stroke} strokeWidth="10"/></svg>;
-                case 'library': return <svg width={size} height={size} viewBox="0 0 100 100"><path d="M20 30 Q50 20 80 30 V80 Q50 70 20 80 Z" fill={fill} stroke={stroke} strokeWidth="8"/><line x1="50" y1="25" x2="50" y2="75" stroke={stroke} strokeWidth="4"/></svg>;
-                case 'electronic_base': return <svg width={size} height={size} viewBox="0 0 100 100"><path d="M50 15 L85 50 L50 85 L15 50 Z" fill={fill} stroke={stroke} strokeWidth="5"/><rect x="42" y="42" width="16" height="16" fill="currentColor"/></svg>;
-                case 'radio_tower': return <svg width={size} height={size} viewBox="0 0 100 100"><path d="M50 10 L80 90 M50 10 L20 90 M20 90 H80 M35 50 H65 M42 30 H58" fill={fill} stroke={stroke} strokeWidth="6"/></svg>;
-                case 'chimney': return <svg width={size} height={size} viewBox="0 0 100 100"><rect x="35" y="15" width="30" height="70" fill={fill} stroke={stroke} strokeWidth="8"/><path d="M35 30 H65 M35 50 H65 M35 70 H65" stroke={stroke} strokeWidth="4"/></svg>;
-                case 'triangulation': return <svg width={size} height={size} viewBox="0 0 100 100"><path d="M50 15 L90 85 H10 Z" fill={fill} stroke={stroke} strokeWidth="6"/><circle cx="50" cy="55" r="8" fill="currentColor"/></svg>;
-                case 'bench_mark': return <svg width={size} height={size} viewBox="0 0 100 100"><rect x="20" y="45" width="60" height="35" fill={fill} stroke={stroke} strokeWidth="8"/><circle cx="50" cy="62" r="8" fill="currentColor"/></svg>;
-                case 'important_port': return <svg width={size} height={size} viewBox="0 0 100 100"><path d="M50 15 V80 M30 40 H70 M30 65 Q30 90 50 90 Q70 90 70 65" fill={fill} stroke={stroke} strokeWidth="10"/></svg>;
-                case 'waste_land': return <svg width={size} height={size} viewBox="0 0 100 100"><path d="M20 30 L30 50 L20 70 M50 30 L60 50 L50 70 M80 30 L90 50 L80 70" fill={fill} stroke={stroke} strokeWidth="8"/></svg>;
-                case 'coniferous': return <svg width={size} height={size} viewBox="0 0 100 100"><path d="M50 20 L80 80 H20 Z" fill={fill} stroke={stroke} strokeWidth="8"/><line x1="50" y1="80" x2="50" y2="90" stroke={stroke} strokeWidth="8"/></svg>;
-                case 'broadleaf': return <svg width={size} height={size} viewBox="0 0 100 100"><circle cx="50" cy="45" r="25" fill={fill} stroke={stroke} strokeWidth="8"/><line x1="50" y1="70" x2="50" y2="85" stroke={stroke} strokeWidth="8"/></svg>;
-                case 'bamboo': return <svg width={size} height={size} viewBox="0 0 100 100"><path d="M30 20 V85 M50 15 V80 M70 20 V85" fill={fill} stroke={stroke} strokeWidth="8"/><path d="M25 40 H35 M45 35 H55 M65 40 H75" stroke={stroke} strokeWidth="8"/></svg>;
-                case 'hot_spring': return <svg width={size} height={size} viewBox="0 0 100 100"><ellipse cx="50" cy="80" rx="35" ry="12" fill={fill} stroke={stroke} strokeWidth="8"/><path d="M35 55 Q40 30 35 15 M50 55 Q55 30 50 15 M65 55 Q70 30 65 15" fill={fill} stroke={stroke} strokeWidth="6"/></svg>;
-                case 'oil_well': return <svg width={size} height={size} viewBox="0 0 100 100"><rect x="25" y="25" width="50" height="50" fill={fill} stroke={stroke} strokeWidth="8"/><path d="M25 25 L75 75 M75 25 L25 75" stroke={stroke} strokeWidth="8"/></svg>;
-                default: return <span className="text-xl font-bold">?</span>;
-            }
-        };
-
-        const MinecraftBg = () => (
-            <div className="fixed inset-0 pointer-events-none overflow-hidden z-0 bg-[#74b44a]">
-                <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-                    <defs>
-                        <pattern id="pixel-grid" width="120" height="120" patternUnits="userSpaceOnUse">
-                            <rect width="120" height="120" fill="#74b44a" />
-                            <rect width="25" height="25" x="15" y="15" fill="#6ba342" />
-                            <rect width="40" height="40" x="70" y="50" fill="#7ebc52" />
-                            <rect width="20" height="20" x="35" y="80" fill="#63983d" />
-                            <rect width="12" height="12" x="90" y="90" fill="#88c95a" />
-                        </pattern>
-                    </defs>
-                    <rect width="100%" height="100%" fill="url(#pixel-grid)" />
-                </svg>
-            </div>
-        );
-
-        function App() {
-            const [screen, setScreen] = useState('landing');
-            const [level, setLevel] = useState(null);
-            const [blocks, setBlocks] = useState([]);
-            const [targetSymbol, setTargetSymbol] = useState(null);
-            const [missionCount, setMissionCount] = useState(0);
-            const [score, setScore] = useState(0);
-            const [message, setMessage] = useState('');
-            const [showHint, setShowHint] = useState(false);
-            const [timeLeft, setTimeLeft] = useState(15);
-            const [isExploding, setIsExploding] = useState(false);
-            const timerRef = useRef(null);
-
-            const initGame = (lvl) => {
-                const symbolsPool = lvl === 'hell' ? ALL_SYMBOLS : SYMBOLS[`level${lvl}`];
-                const newBlocks = [];
-                for (let i = 0; i < 48; i++) {
-                    const randomSymbol = symbolsPool[Math.floor(Math.random() * symbolsPool.length)];
-                    newBlocks.push({ ...randomSymbol, id_instance: i, visible: true });
-                }
-                setBlocks(newBlocks);
-                setLevel(lvl);
-                setScreen('game');
-                setScore(0);
-                setTimeLeft(15);
-                setIsExploding(false);
-                generateMission(newBlocks, lvl);
-            };
-
-            const generateMission = (currentBlocks, lvl) => {
-                const visibleBlocks = currentBlocks.filter(b => b.visible);
-                if (visibleBlocks.length === 0) {
-                    clearInterval(timerRef.current);
-                    setScreen('result');
-                    return;
-                }
-                const uniqueIds = [...new Set(visibleBlocks.map(b => b.id))];
-                const randomId = uniqueIds[Math.floor(Math.random() * uniqueIds.length)];
-                const target = ALL_SYMBOLS.find(s => s.id === randomId);
-                const countOnBoard = visibleBlocks.filter(b => b.id === randomId).length;
-                const missionNum = Math.min(countOnBoard, 3);
-
-                setTargetSymbol(target);
-                setMissionCount(missionNum);
-                setMessage(`${target.name}を ${missionNum}つ みつけて！`);
-                setShowHint(false);
-
-                if (lvl === 'hell') setTimeLeft(15);
-            };
-
-            useEffect(() => {
-                if (screen === 'game' && level === 'hell' && !isExploding) {
-                    timerRef.current = setInterval(() => {
-                        setTimeLeft(prev => {
-                            if (prev === 6) playSound('siren');
-                            if (prev <= 1) {
-                                clearInterval(timerRef.current);
-                                handleExplosion();
-                                return 0;
-                            }
-                            return prev - 1;
-                        });
-                    }, 1000);
-                }
-                return () => clearInterval(timerRef.current);
-            }, [screen, level, isExploding]);
-
-            const handleExplosion = () => {
-                setIsExploding(true);
-                playSound('explosion');
-                setMessage('タイムオーバー！！爆破！！');
-                setTimeout(() => {
-                    setIsExploding(false);
-                    setScreen('gameover');
-                }, 3000);
-            };
-
-            const handleBlockClick = (block) => {
-                if (isExploding) return;
-                if (block.id === targetSymbol.id) {
-                    playSound('correct');
-                    setBlocks(prev => prev.map(b => b.id_instance === block.id_instance ? { ...b, visible: false } : b));
-                    setMissionCount(prev => {
-                        const next = prev - 1;
-                        if (next === 0) {
-                            setScore(s => s + (level === 'hell' ? 30 : 15));
-                            setMessage('任務完了！次へ急げ！');
-                            setTimeout(() => {
-                                setBlocks(current => {
-                                    generateMission(current, level);
-                                    return current;
-                                });
-                            }, 600);
-                        } else {
-                            setMessage(`確認！ あと ${next}つ！`);
-                        }
-                        return next;
-                    });
-                } else {
-                    playSound('wrong');
-                    setMessage('誤認だ！それは違う！');
-                    setShowHint(true);
-                    if (level === 'hell') setTimeLeft(prev => Math.max(0, prev - 2));
-                    setTimeout(() => {
-                        if (!isExploding) {
-                            setMessage(`${targetSymbol.name}を ${missionCount}つ 探せ！`);
-                            setShowHint(false);
-                        }
-                    }, 1200);
-                }
-            };
-
-            return (
-                <div className={`min-h-screen relative font-sans text-slate-800 p-4 md:p-8 transition-all duration-300 ${isExploding ? 'shake-animation' : ''}`}>
-                    <MinecraftBg />
-                    <div className="max-w-5xl mx-auto relative z-10">
-                        {screen === 'landing' && (
-                            <div className="relative z-10 animate-in fade-in duration-700 max-w-4xl mx-auto">
-                                <div className="relative h-64 md:h-80 w-full rounded-3xl overflow-hidden mb-10 shadow-2xl border-4 border-white">
-                                    <div className="absolute inset-0 bg-slate-900/80 flex flex-col items-center justify-center text-white p-6 text-center">
-                                        <Compass className="w-20 h-20 mb-4 text-yellow-400 animate-pulse" />
-                                        <h1 className="text-4xl md:text-5xl font-black mb-2 tracking-tighter drop-shadow-lg">精鋭地図博士への道</h1>
-                                        <p className="text-slate-300 font-bold max-w-lg">
-                                            測量士からパイロットまで、プロが見る景色をマスターせよ。<br />
-                                            地形を読み解く力は、君を最強の冒険者にする。
-                                        </p>
-                                    </div>
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
-                                    <div className="bg-white/95 backdrop-blur-sm p-8 rounded-3xl shadow-lg border-2 border-indigo-100">
-                                        <div className="flex items-center gap-3 mb-4 text-indigo-700">
-                                            <Search className="w-8 h-8" />
-                                            <h2 className="text-2xl font-black">プロが記号を見る理由</h2>
-                                        </div>
-                                        <p className="text-slate-600 leading-relaxed font-medium">
-                                            地図記号を知っていると、地図を見た瞬間に<span className="text-indigo-600 font-bold">「ここは昔からある村だ」「ここは水害に強い場所だ」</span>という情報が頭に飛び込んできます。パイロットは高い煙突を障害物として、救助隊は荒地を見て車両が通れるかを判断します。
-                                        </p>
-                                    </div>
-                                    <div className="bg-white/95 backdrop-blur-sm p-8 rounded-3xl shadow-lg border-2 border-orange-100">
-                                        <div className="flex items-center gap-3 mb-4 text-orange-700">
-                                            <Volume2 className="w-8 h-8" />
-                                            <h2 className="text-2xl font-black">将来どんな役に立つ？</h2>
-                                        </div>
-                                        <ul className="space-y-4">
-                                            <li className="flex gap-3">
-                                                <HardHat className="w-10 h-10 text-orange-500 shrink-0" />
-                                                <p className="text-sm text-slate-600"><span className="font-bold text-slate-800">専門職</span><br />測量士や都市計画家は土地の歴史を読み解きます。</p>
-                                            </li>
-                                            <li className="flex gap-3">
-                                                <ShieldCheck className="w-10 h-10 text-blue-500 shrink-0" />
-                                                <p className="text-sm text-slate-600"><span className="font-bold text-slate-800">レスキュー</span><br />電波が届かない場所での救助には、紙の地図が命を救う道標になります。</p>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                </div>
-                                <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
-                                    <button onClick={() => setScreen('dictionary')} className="bg-emerald-600 hover:bg-emerald-700 text-white text-xl font-black py-5 px-10 rounded-2xl shadow-xl transform hover:-translate-y-1 transition-all flex items-center gap-3 border-b-8 border-emerald-900 w-full sm:w-auto">
-                                        <List size={28} /> 全記号図鑑
-                                    </button>
-                                    <button onClick={() => setScreen('home')} className="bg-slate-800 hover:bg-slate-900 text-white text-xl font-black py-5 px-10 rounded-2xl shadow-xl transform hover:-translate-y-1 transition-all flex items-center gap-3 border-b-8 border-slate-950 w-full sm:w-auto">
-                                        🚀 修行開始
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-                        {screen === 'dictionary' && (
-                            <div className="relative z-10 animate-in fade-in duration-500 max-w-5xl mx-auto">
-                                <div className="bg-white/95 backdrop-blur-sm rounded-3xl p-6 md:p-8 shadow-2xl border-4 border-slate-400">
-                                    <div className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
-                                        <button onClick={() => setScreen('landing')} className="flex items-center gap-2 text-slate-500 hover:text-indigo-600 font-bold px-4 py-2 bg-slate-100 rounded-xl transition-colors">
-                                            <ArrowLeft size={20} /> もどる
-                                        </button>
-                                        <h2 className="text-3xl font-black text-slate-800">地図記号図鑑</h2>
-                                        <div className="w-20 hidden sm:block"></div>
-                                    </div>
-                                    <div className="space-y-12">
-                                        {Object.entries(SYMBOLS).map(([lvl, symbols], index) => (
-                                            <div key={lvl}>
-                                                <div className="flex items-center gap-3 mb-6 border-b-4 border-slate-200 pb-2">
-                                                    <h3 className="text-2xl font-black text-slate-700">LEVEL {index + 1}</h3>
-                                                </div>
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                                                    {symbols.map((s) => (
-                                                        <div key={s.id} className="flex gap-4 p-4 bg-white rounded-2xl border-2 border-slate-100 shadow-sm">
-                                                            <div className="w-14 h-14 shrink-0 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-200 text-slate-700">
-                                                                <MapIcon type={s.id} size="28" />
-                                                            </div>
-                                                            <div>
-                                                                <h4 className="font-black text-slate-800 text-base">{s.name}</h4>
-                                                                <p className="text-xs text-slate-600 leading-tight mt-1">{s.desc}</p>
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                        {screen === 'home' && (
-                            <div className="bg-white/95 backdrop-blur-sm rounded-3xl p-8 shadow-xl border-4 border-slate-300 animate-in slide-in-from-right-8 duration-500 max-w-3xl mx-auto">
-                                <button onClick={() => setScreen('landing')} className="mb-6 flex items-center gap-1 text-slate-400 hover:text-slate-800 font-bold">
-                                    <ArrowLeft size={20} /> トップページへ
-                                </button>
-                                <h2 className="text-3xl font-black text-center mb-12 text-slate-800 italic">MISSION SELECT</h2>
-                                <div className="grid grid-cols-3 gap-6 relative pb-28">
-                                    {[1, 2, 3].map((lvl) => (
-                                        <button key={lvl} onClick={() => initGame(lvl)} className="group bg-white hover:bg-slate-50 border-4 border-slate-800 rounded-2xl p-6 transition-all transform hover:-translate-y-1 shadow-[8px_8px_0px_rgba(0,0,0,0.1)] text-center">
-                                            <div className="text-5xl mb-4">{lvl === 1 ? '🔰' : lvl === 2 ? '🛡️' : '🦅'}</div>
-                                            <div className="text-lg font-black text-slate-900">LEVEL {lvl}</div>
-                                        </button>
-                                    ))}
-                                    <div className="absolute left-1/2 -translate-x-1/2 bottom-0 w-full flex justify-center">
-                                        <button onClick={() => initGame('hell')} className="group flex items-center gap-4 bg-red-600 hover:bg-red-700 border-4 border-red-950 rounded-2xl py-4 px-8 transition-all transform hover:scale-105 shadow-[8px_8px_0px_rgba(0,0,0,0.2)] text-white">
-                                            <Skull className="w-8 h-8 group-hover:animate-spin" />
-                                            <div className="text-left">
-                                                <div className="text-xl font-black italic">HELL MODE</div>
-                                                <div className="text-[10px] font-bold opacity-80">15秒制限・ミス厳禁</div>
-                                            </div>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                        {screen === 'game' && (
-                            <div className="space-y-4">
-                                <div className="flex justify-between items-center bg-white/95 p-4 rounded-2xl shadow-md border-2 border-slate-200">
-                                    <button onClick={() => { clearInterval(timerRef.current); setScreen('home'); }} className="flex items-center gap-1 text-slate-500 hover:text-slate-900 font-bold">
-                                        <ArrowLeft size={20} /> 撤退
-                                    </button>
-                                    <div className="flex items-center gap-4">
-                                        {level === 'hell' && (
-                                            <div className={`flex items-center gap-2 font-black text-xl px-4 py-1 rounded-xl border-2 transition-all ${timeLeft <= 5 ? 'bg-red-100 text-red-600 border-red-600 animate-pulse' : 'bg-slate-100 text-slate-800 border-slate-300'}`}>
-                                                <Timer size={20} /> {timeLeft}s
-                                            </div>
-                                        )}
-                                        <div className="text-emerald-600 font-black">POINT: {score}</div>
-                                    </div>
-                                </div>
-                                <div className={`bg-slate-800 p-6 md:p-8 rounded-3xl text-white text-center shadow-2xl border-b-8 border-slate-950 transition-all min-h-[140px] flex flex-col items-center justify-center relative overflow-hidden ${isExploding ? 'bg-red-600' : ''}`}>
-                                    <h2 className="text-2xl md:text-4xl font-black mb-2 relative z-10">{message}</h2>
-                                    <div className={`transition-all duration-300 transform ${showHint ? 'opacity-100 scale-100 mt-2' : 'opacity-0 scale-50 h-0 pointer-events-none'}`}>
-                                        <div className="bg-white text-slate-900 w-14 h-14 rounded-xl flex items-center justify-center shadow-lg mx-auto border-4 border-yellow-400">
-                                            {targetSymbol && <MapIcon type={targetSymbol.id} size="28" />}
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className={`grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2 pb-10 ${isExploding ? 'grayscale blur-sm' : ''}`}>
-                                    {blocks.map((block) => (
-                                        <button key={block.id_instance} onClick={() => handleBlockClick(block)} disabled={!block.visible || isExploding} className={`aspect-square rounded-xl flex items-center justify-center transition-all ${block.visible ? 'bg-white shadow-sm hover:bg-slate-50 active:scale-90 border-b-2 border-slate-200' : 'opacity-0 scale-0 pointer-events-none'}`}>
-                                            <div className="text-slate-700 scale-90"><MapIcon type={block.id} size="24" /></div>
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                        {(screen === 'gameover' || screen === 'result') && (
-                            <div className={`rounded-3xl p-10 shadow-2xl border-t-8 text-center animate-in zoom-in duration-300 ${screen === 'gameover' ? 'bg-red-950 border-red-500' : 'bg-slate-900 border-yellow-400'}`}>
-                                <div className="text-8xl mb-6">{screen === 'gameover' ? '💥' : <Trophy className="w-20 h-20 text-yellow-400 mx-auto" />}</div>
-                                <h2 className="text-5xl font-black text-white mb-4 italic">{screen === 'gameover' ? 'MISSION FAILED' : 'COMPLETE'}</h2>
-                                <p className="text-xl text-red-200 font-bold mb-8">{screen === 'gameover' ? '鬼教官：「逃げるのか！？貴様の覚悟はその程度か！」' : '君の地理的リテラシーは本物だ。'}</p>
-                                <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                                    <button onClick={() => setScreen('home')} className="bg-white text-slate-900 font-black py-4 px-8 rounded-2xl shadow-lg">戻る</button>
-                                    <button onClick={() => initGame(level === 'hell' ? 'hell' : level)} className={`${screen === 'gameover' ? 'bg-red-600' : 'bg-yellow-400'} text-white font-black py-4 px-8 rounded-2xl flex items-center justify-center gap-2 shadow-lg`}>
-                                        <RefreshCcw size={20} /> 再挑戦
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            );
+            document.getElementById('counter-text').innerText = "クリック数: " + count;
+            
+            console.log("Color changed to: " + randomColor);
         }
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
+        // 起動時に実行
+        window.onload = function() {
+            console.log("App initialized.");
+        };
     </script>
 </body>
 </html>
